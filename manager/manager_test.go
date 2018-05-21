@@ -15,9 +15,9 @@ func aTask(n int, ch chan int) Task {
 }
 
 func TestManager(t *testing.T) {
-	manager := Manager{}
+	manager := NewManager(10)
 
-	manager.Run(10)
+	manager.Run()
 	ch := make(chan int, 1)
 	for i := 0; i < 10; i++ {
 		manager.Send(aTask(1, ch))
@@ -28,7 +28,7 @@ func TestManager(t *testing.T) {
 		<-ch
 		fmt.Println("Received")
 		count++
-		if count == 6 {
+		if count == 10 {
 			break
 		}
 	}

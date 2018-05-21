@@ -1,73 +1,57 @@
 package manager
 
 import (
-	"fmt"
+	"sync"
 )
 
 type Task func()
 
-type TaskRunner struct {
-	ch chan Task
-	n  int
+func runTask(task Task, done chan bool) {
+	task()
+	done <- true
 }
 
-func (tr TaskRunner) Run() {
-	fmt.Printf("Runner %d up and running\n", tr.n)
-	//tr.ch <- func() {}
-	for {
-		task := <-tr.ch
-		//fmt.Printf("Runner %d running ", tr.n)
-		task()
-	}
-}
-
+// Manager represents our worker pool manager
 type Manager struct {
 	pool        []Task
-	inCh, outCh chan Task
-	runners     []TaskRunner
+	inCh        chan Task
+	runners     int
+	totRunners  int
+	mutex       *sync.Mutex
+	runnersChan chan bool
+}
+
+// NewManager returns a new manager
+func NewManager(workers int) *Manager {
+
+	return &Manager{
+		pool:        []Task{},
+		runners:     0,
+		totRunners:  workers,
+		mutex:       &sync.Mutex{},
+		inCh:        make(chan Task),
+		runnersChan: make(chan bool),
+	}
 }
 
 // Run starts the exporter, it spins up a new coroutine
-func (scr *Manager) Run(nOfRunners int) {
-	fmt.Println("Running the exporter")
-	scr.inCh = make(chan Task, 1)
-	fmt.Println("Channel created", scr.inCh)
-	scr.outCh = make(chan Task, 1)
-	fmt.Println("Channel created", scr.outCh)
-	fmt.Printf("Create %d runners\n", nOfRunners)
-	scr.runners = []TaskRunner{}
-	for i := 0; i < nOfRunners; i++ {
-		task := TaskRunner{
-			ch: scr.outCh,
-			n:  i,
-		}
-		scr.runners = append(scr.runners, task)
-		go task.Run()
-	}
-	// i := 0
-	// for {
-	// 	<-scr.outCh
-	// 	fmt.Println("Started")
-	// 	i++
-	// 	scr.outCh <- func() {}
-	// 	if i == nOfRunners {
-	// 		break
-	// 	}
-	// }
+func (scr *Manager) Run() {
+	go scr.runWriter()
 	go scr.runReader()
 }
 
 // Send sends a message to the exporter's loop
 func (scr Manager) Send(tsk Task) {
-	//if tsk == nil {
-	//fmt.Println("Sent", tsk)
-	//}
 	scr.inCh <- tsk
 	return
 }
 
 func (scr Manager) popTask() (*Task, []Task) {
+
 	if len(scr.pool) == 0 {
+		return nil, scr.pool
+	}
+	if scr.runners >= scr.totRunners {
 		return nil, scr.pool
 	}
 
@@ -78,17 +62,28 @@ func (scr Manager) popTask() (*Task, []Task) {
 }
 func (scr *Manager) runWriter() {
 	for {
+		scr.mutex.Lock()
 		head, tail := scr.popTask()
 		if head != nil {
 			scr.pool = tail
-			scr.outCh <- *head
+			scr.runners++
+			go runTask(*head, scr.runnersChan)
 		}
+		scr.mutex.Unlock()
 	}
 }
+
 func (scr *Manager) runReader() {
-	go scr.runWriter()
 	for {
-		msg := <-scr.inCh
-		scr.pool = append(scr.pool, msg)
+		select {
+		case tsk := <-scr.inCh:
+			scr.mutex.Lock()
+			scr.pool = append(scr.pool, tsk)
+			scr.mutex.Unlock()
+		case <-scr.runnersChan:
+			scr.mutex.Lock()
+			scr.runners--
+			scr.mutex.Unlock()
+		}
 	}
 }
