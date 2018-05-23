@@ -13,7 +13,7 @@ manager := NewManager(10)
 Which creates a manager with maximum 10 concurrent processes. Each process is essentially a go routine which runs a task popped
 from the task pool ( a queue).
 
-The next step is now tp run the manager:
+The next step is now to run the manager:
 
 ``` go
 
@@ -21,10 +21,10 @@ manager.Run()
 
 ```
 
-Which let the manager wait for task to be sent. The run function starts two goroutines, so is non-blcoking and we can write any code
+Which lets the manager wait for tasks to be sent. The run function starts two goroutines, so is non-blcoking and we can write any code
 after that.
 
-Let's not add some tasks to the pool. In order to do that we use the method ```Send``` on the manager and we send a task.
+Let's now add some tasks to the pool. In order to do that we use the method ```Send``` on the manager and we send a task.
 A task is a defined type which goes back to a simple:
 
 ``` go
@@ -47,7 +47,7 @@ func aTask(name string, age int) Task {
 ```
 
 This function accepts some parameters and returns a Task (function with no params and returning nothing).
-Let's now add tasks to teh pool:
+Let's now add tasks to the pool:
 
 ``` go
 manager.Send(aTask("John", 32))
@@ -64,8 +64,8 @@ Hi John you are 32 years old
 
 ```
 
-And so on.As soon as a task gets added to teh pool it is then popped and a go routine gets created running that specific task.
+And so on. As soon as a task gets added to the pool it is then popped and a go routine gets created running that specific task.
 This happens only if the number of tasks running is less or equal to the maximum number of concurrent processes set when initialising the manager.
 
-If the number of task running is already equal to teh maximum allowed teh manager waits for a running process to end and tehn pops a new task from
+If the number of task running is already equal to the maximum allowed the manager waits for a running process to end and then pops a new task from
 the pool. 
