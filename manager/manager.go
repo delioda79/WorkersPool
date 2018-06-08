@@ -12,7 +12,13 @@ func runTask(task Task, done chan bool) {
 }
 
 // Manager represents our worker pool manager
-type Manager struct {
+type Manager interface {
+	Run()
+	Send(tsk Task)
+}
+
+// baseManager represents our worker pool manager
+type baseManager struct {
 	pool        []Task
 	inCh        chan Task
 	runners     int
@@ -22,9 +28,9 @@ type Manager struct {
 }
 
 // NewManager returns a new manager
-func NewManager(workers int) *Manager {
+func NewManager(workers int) Manager {
 
-	return &Manager{
+	return &baseManager{
 		pool:        []Task{},
 		runners:     0,
 		totRunners:  workers,
@@ -35,18 +41,18 @@ func NewManager(workers int) *Manager {
 }
 
 // Run starts the exporter, it spins up a new coroutine
-func (scr *Manager) Run() {
+func (scr *baseManager) Run() {
 	go scr.runWriter()
 	go scr.runReader()
 }
 
 // Send sends a message to the exporter's loop
-func (scr Manager) Send(tsk Task) {
+func (scr baseManager) Send(tsk Task) {
 	scr.inCh <- tsk
 	return
 }
 
-func (scr Manager) popTask() (*Task, []Task) {
+func (scr baseManager) popTask() (*Task, []Task) {
 
 	if len(scr.pool) == 0 {
 		return nil, scr.pool
@@ -60,7 +66,7 @@ func (scr Manager) popTask() (*Task, []Task) {
 
 	return head, tail
 }
-func (scr *Manager) runWriter() {
+func (scr *baseManager) runWriter() {
 	for {
 		scr.mutex.Lock()
 		head, tail := scr.popTask()
@@ -73,7 +79,7 @@ func (scr *Manager) runWriter() {
 	}
 }
 
-func (scr *Manager) runReader() {
+func (scr *baseManager) runReader() {
 	for {
 		select {
 		case tsk := <-scr.inCh:
