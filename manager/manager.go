@@ -67,29 +67,26 @@ func (scr baseManager) popTask() (*Task, []Task) {
 	return head, tail
 }
 func (scr *baseManager) runWriter() {
-	for {
-		scr.mutex.Lock()
-		head, tail := scr.popTask()
-		if head != nil {
-			scr.pool = tail
-			scr.runners++
-			go runTask(*head, scr.runnersChan)
-		}
-		scr.mutex.Unlock()
+	head, tail := scr.popTask()
+	if head != nil {
+		scr.pool = tail
+		scr.runners++
+		go runTask(*head, scr.runnersChan)
 	}
 }
 
 func (scr *baseManager) runReader() {
 	for {
+		scr.mutex.Lock()
 		select {
 		case tsk := <-scr.inCh:
-			scr.mutex.Lock()
 			scr.pool = append(scr.pool, tsk)
-			scr.mutex.Unlock()
 		case <-scr.runnersChan:
-			scr.mutex.Lock()
 			scr.runners--
-			scr.mutex.Unlock()
 		}
+		if scr.runners < scr.totRunners {
+			scr.runWriter()
+		}
+		scr.mutex.Unlock()
 	}
 }

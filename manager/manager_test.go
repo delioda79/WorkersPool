@@ -9,17 +9,18 @@ import (
 func aTask(n int, ch chan int) Task {
 	return func() {
 		fmt.Println("Running")
-		time.Sleep(3000000)
+		time.Sleep(time.Millisecond * 3)
 		ch <- n
 	}
 }
 
 func TestManager(t *testing.T) {
-	manager := NewManager(10)
+	nOTasks := 10000
+	manager := NewManager(100)
 
 	manager.Run()
 	ch := make(chan int, 1)
-	for i := 0; i < 10; i++ {
+	for i := 0; i < nOTasks; i++ {
 		manager.Send(aTask(1, ch))
 	}
 
@@ -28,7 +29,7 @@ func TestManager(t *testing.T) {
 		<-ch
 		fmt.Println("Received")
 		count++
-		if count == 10 {
+		if count == nOTasks {
 			break
 		}
 	}
