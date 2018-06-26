@@ -15,6 +15,7 @@ func runTask(task Task, done chan bool) {
 type Manager interface {
 	Run()
 	Send(tsk Task)
+	GetPoolSize() int
 }
 
 // baseManager represents our worker pool manager
@@ -89,4 +90,11 @@ func (scr *baseManager) runReader() {
 		}
 		scr.mutex.Unlock()
 	}
+}
+
+func (scr *baseManager) GetPoolSize() int {
+	scr.mutex.Lock()
+	res := len(scr.pool)
+	scr.mutex.Unlock()
+	return res
 }
