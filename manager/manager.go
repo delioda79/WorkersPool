@@ -93,8 +93,5 @@ func (scr *baseManager) runReader() {
 }
 
 func (scr *baseManager) GetPoolSize() int {
-	scr.mutex.Lock()
-	res := len(scr.pool)
-	scr.mutex.Unlock()
-	return res
+	return len(scr.pool)
 }
