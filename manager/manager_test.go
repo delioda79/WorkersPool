@@ -24,12 +24,18 @@ func TestManager(t *testing.T) {
 		manager.Send(aTask(1, ch))
 	}
 
+	time.Sleep(time.Second * 5)
+
+	for i := 0; i < nOTasks; i++ {
+		manager.Send(aTask(1, ch))
+	}
+
 	count := 0
 	for {
 		<-ch
 		fmt.Println("Received")
 		count++
-		if count == nOTasks {
+		if count == nOTasks*2 {
 			break
 		}
 	}
