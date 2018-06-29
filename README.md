@@ -52,7 +52,7 @@ Let's now add tasks to the pool:
 ``` go
 manager.Send(aTask("John", 32))
 manager.Send(atask("Tom", 22))
-manager.Send("Mark", 48)
+manager.Send(atask("Mark", 48))
 
 ```
 
